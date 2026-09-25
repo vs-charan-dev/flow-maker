@@ -1,4 +1,12 @@
 export type EnergyLevel = "low" | "normal" | "high";
+export type UnderstandingLevel = "clear" | "partial" | "stuck";
+
+export interface UserProfile {
+  goal: "learn" | "create" | "finish";
+  experience: "beginner" | "some" | "confident";
+  approach: "examples" | "practice" | "steps";
+  pace: "short" | "steady" | "deep";
+}
 
 export interface TaskSetupData {
   task: string;
@@ -52,6 +60,8 @@ export interface ActiveSession {
   reflection?: {
     speedFeedback?: "faster" | "same" | "slower";
     engagementRating?: number; // 1-5
+    understanding?: UnderstandingLevel;
+    unclearNote?: string;
   };
 }
 
@@ -69,6 +79,17 @@ export interface SessionSummaryRecord {
   desiredOutcome: string;
   energy: EnergyLevel;
   speedFeedback?: "faster" | "same" | "slower";
+  engagementRating?: number;
+  understanding?: UnderstandingLevel;
+  unclearNote?: string;
+}
+
+export interface LearningHistoryItem {
+  task: string;
+  outcome: string;
+  understanding?: UnderstandingLevel;
+  unclearNote?: string;
+  completionPercentage: number;
   engagementRating?: number;
 }
 

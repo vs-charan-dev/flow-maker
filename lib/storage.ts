@@ -1,14 +1,44 @@
-import { ActiveSession, SessionSummaryRecord } from "./types";
+import { ActiveSession, SessionSummaryRecord, UnderstandingLevel, UserProfile } from "./types";
 
 const API_KEY_STORAGE_KEY = "flow_companion_api_key";
 const MODEL_STORAGE_KEY = "flow_companion_model_id";
 const ACTIVE_SESSION_STORAGE_KEY = "flow_companion_active_session";
 const RECENT_SESSIONS_STORAGE_KEY = "flow_companion_recent_sessions";
+const PROFILE_STORAGE_KEY = "flow_companion_profile";
 
 const DEFAULT_MODEL = "openai/gpt-4o-mini";
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";
+}
+
+export function getStoredProfile(): UserProfile | null {
+  if (!isBrowser()) return null;
+  try {
+    const raw = window.localStorage.getItem(PROFILE_STORAGE_KEY);
+    if (!raw) return null;
+    const profile: unknown = JSON.parse(raw);
+    if (!profile || typeof profile !== "object") return null;
+    const p = profile as Record<string, unknown>;
+    if (
+      !["learn", "create", "finish"].includes(String(p.goal)) ||
+      !["beginner", "some", "confident"].includes(String(p.experience)) ||
+      !["examples", "practice", "steps"].includes(String(p.approach)) ||
+      !["short", "steady", "deep"].includes(String(p.pace))
+    ) return null;
+    return p as unknown as UserProfile;
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredProfile(profile: UserProfile): void {
+  if (!isBrowser()) return;
+  try {
+    window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+  } catch (err) {
+    console.warn("Unable to save profile to localStorage", err);
+  }
 }
 
 /**
@@ -139,14 +169,16 @@ export function saveCompletedSession(summary: SessionSummaryRecord): void {
 export function updateRecentSessionReflection(
   sessionId: string,
   speedFeedback?: "faster" | "same" | "slower",
-  engagementRating?: number
+  engagementRating?: number,
+  understanding?: UnderstandingLevel,
+  unclearNote?: string
 ): void {
   if (!isBrowser()) return;
   try {
     const current = getRecentSessions();
     const updated = current.map((s) => {
       if (s.id === sessionId) {
-        return { ...s, speedFeedback, engagementRating };
+        return { ...s, speedFeedback, engagementRating, understanding, unclearNote };
       }
       return s;
     });

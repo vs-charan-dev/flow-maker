@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getActiveSession, setActiveSession, getStoredApiKey, getStoredModel } from "@/lib/storage";
+import { getActiveSession, setActiveSession, getStoredApiKey, getStoredModel, getStoredProfile, getRecentSessions } from "@/lib/storage";
+import { learningHistoryFromSessions } from "@/lib/personalization";
 import { ActiveSession, FeedbackType, Mission, SessionMission } from "@/lib/types";
 import ProgressBar from "@/components/ProgressBar";
 import MissionCard from "@/components/MissionCard";
@@ -144,6 +145,8 @@ export default function SessionPage() {
           completedMissions: session.missions.filter((m) => m.status === "completed"),
           currentMission,
           feedback,
+          profile: getStoredProfile() ?? undefined,
+          learningHistory: learningHistoryFromSessions(getRecentSessions()),
         }),
       });
 

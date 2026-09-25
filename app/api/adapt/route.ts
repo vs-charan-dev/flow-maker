@@ -51,6 +51,8 @@ export async function POST(req: NextRequest) {
     completedMissions,
     currentMission,
     feedback,
+    profile,
+    learningHistory,
   } = parseResult.data;
 
   const completedIds = new Set(completedMissions.map((m) => m.id));
@@ -60,7 +62,9 @@ export async function POST(req: NextRequest) {
     remainingMinutes,
     completedMissions,
     currentMission,
-    feedback
+    feedback,
+    profile,
+    learningHistory
   );
 
   let rawContent = "";

@@ -35,8 +35,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: firstMsg }, { status: 400 });
   }
 
-  const { apiKey, model, task, duration, outcome, energy } = parseResult.data;
-  const userPrompt = buildQuestUserPrompt(task, duration, outcome, energy);
+  const { apiKey, model, task, duration, outcome, energy, profile, learningHistory } = parseResult.data;
+  const userPrompt = buildQuestUserPrompt(task, duration, outcome, energy, profile, learningHistory);
 
   let rawContent = "";
   try {

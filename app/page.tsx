@@ -6,6 +6,10 @@ import SettingsModal from "@/components/SettingsModal";
 import TaskSetupForm from "@/components/TaskSetupForm";
 import RecentSessions from "@/components/RecentSessions";
 import LoadingOverlay from "@/components/LoadingOverlay";
+import ProfileOnboarding from "@/components/ProfileOnboarding";
+import LearningSuggestions from "@/components/LearningSuggestions";
+import UnderstandingCheckIn from "@/components/UnderstandingCheckIn";
+import { learningHistoryFromSessions } from "@/lib/personalization";
 import {
   getStoredApiKey,
   getStoredModel,
@@ -14,8 +18,11 @@ import {
   clearStoredApiKey,
   setActiveSession,
   getRecentSessions,
+  getStoredProfile,
+  setStoredProfile,
+  updateRecentSessionReflection,
 } from "@/lib/storage";
-import { TaskSetupData, ActiveSession, Mission, SessionSummaryRecord } from "@/lib/types";
+import { TaskSetupData, ActiveSession, Mission, SessionSummaryRecord, UnderstandingLevel, UserProfile } from "@/lib/types";
 import { AlertCircle } from "lucide-react";
 
 export default function HomePage() {
@@ -24,6 +31,8 @@ export default function HomePage() {
   const [apiKey, setApiKey] = useState("");
   const [model, setModel] = useState("openai/gpt-4o-mini");
   const [isMounted, setIsMounted] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   // Connection test state
   const [isConnecting, setIsConnecting] = useState(false);
@@ -47,6 +56,7 @@ export default function HomePage() {
     setApiKey(getStoredApiKey());
     setModel(getStoredModel());
     setRecentSessions(getRecentSessions());
+    setProfile(getStoredProfile());
 
     // Check for repeat prefill from sessionStorage
     try {
@@ -133,6 +143,8 @@ export default function HomePage() {
           duration: data.duration,
           outcome: data.outcome,
           energy: data.energy,
+          profile: profile ?? undefined,
+          learningHistory: learningHistoryFromSessions(getRecentSessions()),
         }),
       });
 
@@ -183,6 +195,19 @@ export default function HomePage() {
     formContainerRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const handleProfileComplete = (updated: UserProfile) => {
+    setStoredProfile(updated);
+    setProfile(updated);
+    setIsEditingProfile(false);
+  };
+
+  const handleCheckIn = (answer: UnderstandingLevel) => {
+    const latest = recentSessions[0];
+    if (!latest) return;
+    updateRecentSessionReflection(latest.id, latest.speedFeedback, latest.engagementRating, answer, latest.unclearNote);
+    setRecentSessions(getRecentSessions());
+  };
+
   return (
     <div className="min-h-screen flex flex-col justify-between bg-slate-50 text-slate-900 pb-12">
       <div className="w-full">
@@ -202,7 +227,11 @@ export default function HomePage() {
             </p>
           </div>
 
-          {generationError && (
+          {isMounted && (!profile || isEditingProfile) ? (
+            <ProfileOnboarding initialProfile={profile} onComplete={handleProfileComplete} onCancel={profile ? () => setIsEditingProfile(false) : undefined} />
+          ) : null}
+
+          {profile && !isEditingProfile && generationError && (
             <div
               className="mb-6 p-4 max-w-xl mx-auto bg-rose-50 border border-rose-200 rounded-xl text-left text-sm text-rose-800 flex items-start gap-3"
               role="alert"
@@ -215,7 +244,12 @@ export default function HomePage() {
             </div>
           )}
 
+          {profile && !isEditingProfile && (
           <div ref={formContainerRef}>
+            <div className="max-w-xl mx-auto mb-6 flex items-center justify-between text-left rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3">
+              <div><p className="text-sm font-semibold text-indigo-900">Your profile is ready</p><p className="text-xs text-indigo-700">Missions will use your preferred level, style, and pace.</p></div>
+              <button type="button" onClick={() => setIsEditingProfile(true)} className="text-sm font-semibold text-indigo-700 hover:underline focus-ring rounded">Edit profile</button>
+            </div>
             {isMounted && (
               <TaskSetupForm
                 key={formKey}
@@ -228,13 +262,20 @@ export default function HomePage() {
               />
             )}
           </div>
+          )}
 
-          {/* Recent Sessions list */}
-          {isMounted && (
-            <RecentSessions
-              sessions={recentSessions}
-              onRepeat={handleRepeatSession}
-            />
+          {isMounted && profile && !isEditingProfile && (
+            <UnderstandingCheckIn session={recentSessions[0]} onAnswer={handleCheckIn} />
+          )}
+          {isMounted && profile && !isEditingProfile && (
+            <LearningSuggestions sessions={recentSessions} onChoose={(setup) => {
+              setInitialFormValues(setup);
+              setFormKey((key) => key + 1);
+              formContainerRef.current?.scrollIntoView({ behavior: "smooth" });
+            }} />
+          )}
+          {isMounted && profile && !isEditingProfile && (
+            <RecentSessions sessions={recentSessions} onRepeat={handleRepeatSession} />
           )}
         </main>
       </div>

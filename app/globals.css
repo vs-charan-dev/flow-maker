@@ -19,3 +19,33 @@ body {
     @apply focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2;
   }
 }
+
+.duration-range {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 8px;
+  border-radius: 9999px;
+}
+
+.duration-range::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 50%;
+  background: #4f46e5;
+}
+
+.duration-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 50%;
+  background: #4f46e5;
+}
+
+.duration-range:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 4px;
+}

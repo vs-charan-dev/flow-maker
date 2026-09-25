@@ -2,6 +2,22 @@ import { z } from "zod";
 
 export const EnergySchema = z.enum(["low", "normal", "high"]);
 
+export const UserProfileSchema = z.object({
+  goal: z.enum(["learn", "create", "finish"]),
+  experience: z.enum(["beginner", "some", "confident"]),
+  approach: z.enum(["examples", "practice", "steps"]),
+  pace: z.enum(["short", "steady", "deep"]),
+});
+
+export const LearningHistorySchema = z.array(z.object({
+  task: z.string().max(500),
+  outcome: z.string().max(500),
+  understanding: z.enum(["clear", "partial", "stuck"]).optional(),
+  unclearNote: z.string().max(300).optional(),
+  completionPercentage: z.number().min(0).max(100),
+  engagementRating: z.number().int().min(1).max(5).optional(),
+})).max(10);
+
 export const TaskSetupSchema = z.object({
   task: z.string().trim().min(1, "Please enter what you need to do."),
   duration: z
@@ -20,6 +36,8 @@ export const QuestRequestSchema = z.object({
   duration: z.number().int().min(10, "Duration must be at least 10 minutes.").max(240, "Duration cannot exceed 240 minutes."),
   outcome: z.string().trim().min(1, "Desired outcome is required."),
   energy: EnergySchema.default("normal"),
+  profile: UserProfileSchema.optional(),
+  learningHistory: LearningHistorySchema.optional(),
 });
 
 export const MissionSchema = z.object({
@@ -46,6 +64,8 @@ export const AdaptRequestSchema = z.object({
   completedMissions: z.array(MissionSchema),
   currentMission: MissionSchema,
   feedback: z.enum(["too_hard", "bored", "not_useful"]),
+  profile: UserProfileSchema.optional(),
+  learningHistory: LearningHistorySchema.optional(),
 });
 
 export const AdaptResponseSchema = z.object({

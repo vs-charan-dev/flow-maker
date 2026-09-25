@@ -12,6 +12,11 @@ interface TaskSetupFormProps {
   phase?: number;
 }
 
+function minutePosition(minute: number): string {
+  const fraction = (minute - 10) / 230;
+  return `calc(${8 - 16 * fraction}px + ${100 * fraction}%)`;
+}
+
 export default function TaskSetupForm({
   initialValues,
   onSubmit,
@@ -24,6 +29,8 @@ export default function TaskSetupForm({
   const [duration, setDuration] = useState<number>(initialValues?.duration ?? 60);
   const [outcome, setOutcome] = useState(initialValues?.outcome || "");
   const [energy, setEnergy] = useState<EnergyLevel>(initialValues?.energy || "normal");
+  const sliderDuration = Number.isNaN(duration) ? 60 : Math.min(240, Math.max(10, duration));
+  const sliderPosition = minutePosition(sliderDuration);
 
   const [errors, setErrors] = useState<{
     task?: string;
@@ -181,20 +188,26 @@ export default function TaskSetupForm({
           type="range"
           min={10}
           max={240}
-          step={5}
-          value={isNaN(duration) ? 60 : Math.min(240, Math.max(10, duration))}
+          step={1}
+          value={sliderDuration}
           onChange={(e) => {
             setDuration(parseInt(e.target.value, 10));
             if (errors.duration) setErrors((prev) => ({ ...prev, duration: undefined }));
           }}
-          className="w-full accent-indigo-600 cursor-pointer"
+          className="duration-range w-full cursor-pointer"
+          style={{ background: `linear-gradient(to right, #4f46e5 ${sliderPosition}, #e2e8f0 ${sliderPosition})` }}
           aria-label="Duration slider"
         />
-        <div className="flex justify-between text-[11px] text-slate-400 font-medium">
-          <span>10m</span>
-          <span>60m (Default)</span>
-          <span>120m</span>
-          <span>240m</span>
+        <div className="relative h-5 text-[11px] text-slate-500 font-medium" aria-hidden="true">
+          {([10, 60, 120, 240] as const).map((minute) => (
+            <span
+              key={minute}
+              className={`absolute top-0 whitespace-nowrap ${minute === 10 ? "" : minute === 240 ? "-translate-x-full" : "-translate-x-1/2"}`}
+              style={{ left: minutePosition(minute) }}
+            >
+              {minute}m{minute === 60 ? " (Default)" : ""}
+            </span>
+          ))}
         </div>
         {errors.duration && (
           <p className="text-xs text-rose-600 font-medium">{errors.duration}</p>

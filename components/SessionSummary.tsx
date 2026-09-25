@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ActiveSession } from "@/lib/types";
+import { ActiveSession, UnderstandingLevel } from "@/lib/types";
 import {
   saveCompletedSession,
   updateRecentSessionReflection,
@@ -21,6 +21,8 @@ export default function SessionSummary({ session, onRepeat }: SessionSummaryProp
   const [engagementRating, setEngagementRating] = useState<number | undefined>(
     session.reflection?.engagementRating
   );
+  const [understanding, setUnderstanding] = useState<UnderstandingLevel | undefined>(session.reflection?.understanding);
+  const [unclearNote, setUnclearNote] = useState(session.reflection?.unclearNote ?? "");
 
   const completedMissions = session.missions.filter((m) => m.status === "completed");
   const skippedMissions = session.missions.filter((m) => m.status === "skipped");
@@ -46,38 +48,47 @@ export default function SessionSummary({ session, onRepeat }: SessionSummaryProp
       energy: session.energy,
       speedFeedback,
       engagementRating,
+      understanding,
+      unclearNote: unclearNote.trim() || undefined,
     });
-  }, [session, completedMissions.length, skippedMissions.length, completionRate, estimatedFocusedMinutes, speedFeedback, engagementRating]);
+  }, [session, completedMissions.length, skippedMissions.length, completionRate, estimatedFocusedMinutes, speedFeedback, engagementRating, understanding, unclearNote]);
+
+  const persistReflection = (
+    nextSpeed: "faster" | "same" | "slower" | undefined,
+    nextEngagement: number | undefined,
+    nextUnderstanding: UnderstandingLevel | undefined,
+    nextNote: string
+  ) => {
+    updateRecentSessionReflection(session.id, nextSpeed, nextEngagement, nextUnderstanding, nextNote.trim() || undefined);
+    setActiveSession({
+      ...session,
+      reflection: {
+        speedFeedback: nextSpeed,
+        engagementRating: nextEngagement,
+        understanding: nextUnderstanding,
+        unclearNote: nextNote.trim() || undefined,
+      },
+    });
+  };
 
   const handleSpeedSelect = (val: "faster" | "same" | "slower") => {
     const nextVal = speedFeedback === val ? undefined : val;
     setSpeedFeedback(nextVal);
-    updateRecentSessionReflection(session.id, nextVal, engagementRating);
-
-    // Update active session in sessionStorage
-    const updated: ActiveSession = {
-      ...session,
-      reflection: {
-        ...session.reflection,
-        speedFeedback: nextVal,
-      },
-    };
-    setActiveSession(updated);
+    persistReflection(nextVal, engagementRating, understanding, unclearNote);
   };
 
   const handleRatingSelect = (rating: number) => {
     const nextRating = engagementRating === rating ? undefined : rating;
     setEngagementRating(nextRating);
-    updateRecentSessionReflection(session.id, speedFeedback, nextRating);
+    persistReflection(speedFeedback, nextRating, understanding, unclearNote);
+  };
 
-    const updated: ActiveSession = {
-      ...session,
-      reflection: {
-        ...session.reflection,
-        engagementRating: nextRating,
-      },
-    };
-    setActiveSession(updated);
+  const handleUnderstandingSelect = (value: UnderstandingLevel) => {
+    const next = understanding === value ? undefined : value;
+    setUnderstanding(next);
+    const nextNote = next === "clear" ? "" : unclearNote;
+    if (next === "clear") setUnclearNote("");
+    persistReflection(speedFeedback, engagementRating, next, nextNote);
   };
 
   return (
@@ -154,8 +165,27 @@ export default function SessionSummary({ session, onRepeat }: SessionSummaryProp
 
       {/* Feedback & Engagement Section */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
-        {/* Faster than normal? */}
         <div className="space-y-3">
+          <p className="text-sm font-bold text-slate-900">How well do you understand this now?</p>
+          <p className="text-xs text-slate-600">Finishing a session does not have to mean the topic is clear. Your answer helps shape the next one.</p>
+          <div className="grid grid-cols-3 gap-2" role="group" aria-label="Understanding after session">
+            {([
+              { id: "clear", label: "I get it" },
+              { id: "partial", label: "Some parts" },
+              { id: "stuck", label: "Still stuck" },
+            ] as const).map((option) => (
+              <button key={option.id} type="button" onClick={() => handleUnderstandingSelect(option.id)} aria-pressed={understanding === option.id} className={`py-2 px-2 rounded-xl text-xs font-semibold border transition ${understanding === option.id ? "bg-indigo-600 text-white border-indigo-600" : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"}`}>{option.label}</button>
+            ))}
+          </div>
+          {understanding && understanding !== "clear" && (
+            <div>
+              <label htmlFor="unclear-note" className="block text-xs font-semibold text-slate-700 mb-1">What is still unclear? (Optional)</label>
+              <textarea id="unclear-note" rows={2} maxLength={300} value={unclearNote} onChange={(event) => setUnclearNote(event.target.value)} onBlur={() => persistReflection(speedFeedback, engagementRating, understanding, unclearNote)} placeholder="e.g. I can follow examples but cannot solve one alone" className="w-full rounded-xl border border-slate-300 p-3 text-sm text-slate-900 focus-ring" />
+            </div>
+          )}
+        </div>
+        {/* Faster than normal? */}
+        <div className="space-y-3 pt-4 border-t border-slate-100">
           <label className="block text-sm font-bold text-slate-900 flex items-center gap-2">
             <Clock className="w-4 h-4 text-indigo-600" />
             Did this session feel faster than normal?

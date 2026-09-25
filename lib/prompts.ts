@@ -1,4 +1,16 @@
-import { EnergyLevel, Mission } from "./types";
+import { EnergyLevel, LearningHistoryItem, Mission, UserProfile } from "./types";
+
+function profileContext(profile?: UserProfile): string {
+  if (!profile) return "";
+  return `User profile (preferences, not a substitute for the current task): ${JSON.stringify(profile)}
+Use the profile to adjust explanation level, activity style, and mission pacing. Prioritize the stated task and outcome when they differ from general preferences.\n`;
+}
+
+function historyContext(history?: LearningHistoryItem[]): string {
+  if (!history?.length) return "";
+  return `Recent learning history (user-reported understanding is more reliable than completion): ${JSON.stringify(history)}
+If a related topic was only partly understood or felt unclear, revisit the gap with simpler explanations and checks for understanding. Do not assume that completing missions means the user mastered the topic.\n`;
+}
 
 export const QUEST_SYSTEM_PROMPT = `You are an AI session designer for AI Flow Companion.
 Your job is to transform one long work session into a sequence of short, engaging, and useful missions.
@@ -40,12 +52,16 @@ export function buildQuestUserPrompt(
   task: string,
   duration: number,
   outcome: string,
-  energy: EnergyLevel
+  energy: EnergyLevel,
+  profile?: UserProfile,
+  history?: LearningHistoryItem[]
 ): string {
   return `Task: ${task}
 Total Duration: ${duration} minutes
 Desired Outcome: ${outcome}
 Current Energy Level: ${energy}
+${profileContext(profile)}
+${historyContext(history)}
 
 Design a mission sequence that sums to EXACTLY ${duration} minutes. Return ONLY JSON.`;
 }
@@ -99,7 +115,9 @@ export function buildAdaptUserPrompt(
   remainingMinutes: number,
   completedMissions: Mission[],
   currentMission: Mission,
-  feedback: "too_hard" | "bored" | "not_useful"
+  feedback: "too_hard" | "bored" | "not_useful",
+  profile?: UserProfile,
+  history?: LearningHistoryItem[]
 ): string {
   return `Original Goal: ${originalGoal}
 Desired Outcome: ${desiredOutcome}
@@ -107,6 +125,8 @@ Remaining Minute Budget: ${remainingMinutes} minutes
 Current Mission: ${JSON.stringify(currentMission)}
 Completed Missions: ${JSON.stringify(completedMissions.map((m) => ({ id: m.id, title: m.title })))}
 User Feedback on Current Mission: "${feedback}"
+${profileContext(profile)}
+${historyContext(history)}
 
 Provide revised missions replacing the current and remaining pending work. The sum of minutes for revisedMissions MUST EQUAL EXACTLY ${remainingMinutes}. Return ONLY JSON.`;
 }
